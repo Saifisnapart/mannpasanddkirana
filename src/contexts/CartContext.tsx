@@ -3,33 +3,26 @@ import { CartItem } from '@/types';
 import { getListing, getVendor } from '@/data/sampleData';
 
 interface CartContextType {
-  vendorId: string | null;
   items: CartItem[];
-  addItem: (listingId: string) => 'added' | 'conflict';
+  addItem: (listingId: string) => void;
   removeItem: (listingId: string) => void;
   updateQty: (listingId: string, qty: number) => void;
   clearCart: () => void;
-  switchVendorAndAdd: (listingId: string) => void;
   totalItems: number;
   subtotal: number;
-  vendorName: string | null;
+  vendorIds: string[];
+  vendorNames: string[];
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [vendorId, setVendorId] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addItem = useCallback((listingId: string): 'added' | 'conflict' => {
+  const addItem = useCallback((listingId: string) => {
     const listing = getListing(listingId);
-    if (!listing) return 'added';
+    if (!listing) return;
 
-    if (vendorId && vendorId !== listing.vendorId) {
-      return 'conflict';
-    }
-
-    setVendorId(listing.vendorId);
     setItems(prev => {
       const existing = prev.find(i => i.listingId === listingId);
       if (existing) {
@@ -37,35 +30,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { listingId, qty: 1 }];
     });
-    return 'added';
-  }, [vendorId]);
+  }, []);
 
   const removeItem = useCallback((listingId: string) => {
-    setItems(prev => {
-      const next = prev.filter(i => i.listingId !== listingId);
-      if (next.length === 0) setVendorId(null);
-      return next;
-    });
+    setItems(prev => prev.filter(i => i.listingId !== listingId));
   }, []);
 
   const updateQty = useCallback((listingId: string, qty: number) => {
     if (qty <= 0) {
-      removeItem(listingId);
+      setItems(prev => prev.filter(i => i.listingId !== listingId));
       return;
     }
     setItems(prev => prev.map(i => i.listingId === listingId ? { ...i, qty } : i));
-  }, [removeItem]);
+  }, []);
 
   const clearCart = useCallback(() => {
     setItems([]);
-    setVendorId(null);
-  }, []);
-
-  const switchVendorAndAdd = useCallback((listingId: string) => {
-    const listing = getListing(listingId);
-    if (!listing) return;
-    setItems([{ listingId, qty: 1 }]);
-    setVendorId(listing.vendorId);
   }, []);
 
   const totalItems = items.reduce((sum, i) => sum + i.qty, 0);
@@ -75,10 +55,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return sum + (listing ? listing.price * i.qty : 0);
   }, 0);
 
-  const vendorName = vendorId ? getVendor(vendorId)?.name ?? null : null;
+  const vendorIds = [...new Set(items.map(i => {
+    const listing = getListing(i.listingId);
+    return listing?.vendorId || '';
+  }).filter(Boolean))];
+
+  const vendorNames = vendorIds.map(id => getVendor(id)?.name || '').filter(Boolean);
 
   return (
-    <CartContext.Provider value={{ vendorId, items, addItem, removeItem, updateQty, clearCart, switchVendorAndAdd, totalItems, subtotal, vendorName }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, totalItems, subtotal, vendorIds, vendorNames }}>
       {children}
     </CartContext.Provider>
   );

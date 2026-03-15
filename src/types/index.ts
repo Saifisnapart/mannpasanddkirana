@@ -1,7 +1,15 @@
+// Core Types for MannPasandd App
+
+export interface Location {
+  lat: number;
+  lng: number;
+}
+
 export interface Vendor {
   id: string;
   slug: string;
   name: string;
+  type: 'grocery' | 'meat';
   rating: number;
   reviewCount: number;
   locality: string;
@@ -13,6 +21,9 @@ export interface Vendor {
   banner?: string;
   description?: string;
   categories: string[];
+  lat: number;
+  lng: number;
+  image: string;
 }
 
 export interface Product {
@@ -23,6 +34,8 @@ export interface Product {
   image: string;
   description?: string;
   searchTerms: string[];
+  unit: string;
+  isActive: boolean;
 }
 
 export interface VendorListing {
@@ -34,6 +47,7 @@ export interface VendorListing {
   quantity: number;
   unit: string;
   stock: 'in_stock' | 'low_stock' | 'out_of_stock';
+  stockQty: number;
 }
 
 export interface CartItem {
@@ -42,18 +56,21 @@ export interface CartItem {
 }
 
 export interface CartState {
-  vendorId: string | null;
   items: CartItem[];
 }
 
 export interface Order {
   id: string;
-  vendorId: string;
-  items: (CartItem & { price: number; productName: string })[];
+  vendorIds: string[];
+  items: (CartItem & { price: number; productName: string; vendorId: string })[];
+  subtotal: number;
+  deliveryFee: number;
+  taxAmount: number;
   total: number;
-  status: 'placed' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: 'placed' | 'confirmed' | 'preparing' | 'picked_up' | 'out_for_delivery' | 'delivered' | 'cancelled';
   createdAt: string;
   deliveryAddress: string;
+  paymentMethod: 'cod' | 'upi' | 'card';
 }
 
 export interface Address {
@@ -61,7 +78,10 @@ export interface Address {
   label: string;
   full: string;
   pincode: string;
+  area: string;
   isDefault: boolean;
+  lat: number;
+  lng: number;
 }
 
 export type SortOption = 'price_asc' | 'price_desc' | 'quantity_desc' | 'rating' | 'delivery';
@@ -73,4 +93,21 @@ export interface FilterState {
   localities: string[];
   inStockOnly: boolean;
   openOnly: boolean;
+}
+
+export interface ShopRanking {
+  vendor: Vendor;
+  distance: number;
+  availableItems: number;
+  totalItems: number;
+  cartTotal: number;
+  stockStrength: number;
+  isBestMatch: boolean;
+}
+
+export interface SplitOrder {
+  primaryShop: ShopRanking;
+  secondaryShop?: ShopRanking;
+  primaryItems: CartItem[];
+  secondaryItems: CartItem[];
 }
