@@ -5,12 +5,11 @@ import VendorComparisonCard from '@/components/product/VendorComparisonCard';
 import SortDropdown from '@/components/filters/SortDropdown';
 import FilterChips from '@/components/filters/FilterChips';
 import FilterDrawer from '@/components/filters/FilterDrawer';
-import CartConflictModal from '@/components/cart/CartConflictModal';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal } from 'lucide-react';
-import { SortOption, FilterState, VendorListing } from '@/types';
-import { searchListings, getVendor, getProduct, vendors } from '@/data/sampleData';
+import { SortOption, FilterState } from '@/types';
+import { searchListings, getVendor, getProduct } from '@/data/sampleData';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
@@ -22,8 +21,7 @@ export default function SearchResults() {
   const [filters, setFilters] = useState<FilterState>({
     brands: [], priceRange: null, quantityRange: null, localities: [], inStockOnly: false, openOnly: false,
   });
-  const [conflictModal, setConflictModal] = useState<{ listingId: string } | null>(null);
-  const { addItem, switchVendorAndAdd, vendorName, vendorId } = useCart();
+  const { addItem } = useCart();
 
   const rawResults = useMemo(() => searchListings(query), [query]);
 
@@ -63,7 +61,6 @@ export default function SearchResults() {
     return arr;
   }, [filteredResults, sort]);
 
-  // Badge logic
   const lowestPrice = sortedResults.length ? Math.min(...sortedResults.map(l => l.price)) : 0;
   const highestQuantity = sortedResults.length ? Math.max(...sortedResults.map(l => l.quantity)) : 0;
   const fastestDelivery = sortedResults.length
@@ -71,24 +68,15 @@ export default function SearchResults() {
     : 99;
 
   const handleChooseVendor = (listingId: string) => {
-    const result = addItem(listingId);
-    if (result === 'conflict') {
-      setConflictModal({ listingId });
-    } else {
-      toast.success('Added to cart!');
-    }
+    addItem(listingId);
+    toast.success('Added to cart!');
   };
-
-  const conflictListing = conflictModal ? sortedResults.find(l => l.id === conflictModal.listingId) || rawResults.find(l => l.id === conflictModal.listingId) : null;
-  const conflictVendor = conflictListing ? getVendor(conflictListing.vendorId) : null;
 
   return (
     <div className="px-4 py-4 space-y-4">
       <TopSearchBar initialQuery={query} compact />
-
       <FilterChips activeQuery={query} />
 
-      {/* Sort + Filter bar */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
           {sortedResults.length > 0 ? (
@@ -103,7 +91,6 @@ export default function SearchResults() {
         </div>
       </div>
 
-      {/* Results */}
       {sortedResults.length > 0 ? (
         <div className="space-y-3">
           {sortedResults.map(listing => {
@@ -130,20 +117,6 @@ export default function SearchResults() {
         filters={filters}
         onFiltersChange={setFilters}
         searchQuery={query}
-      />
-
-      <CartConflictModal
-        open={!!conflictModal}
-        currentVendor={vendorName || ''}
-        newVendor={conflictVendor?.name || ''}
-        onConfirm={() => {
-          if (conflictModal) {
-            switchVendorAndAdd(conflictModal.listingId);
-            toast.success('Cart cleared. Item added!');
-          }
-          setConflictModal(null);
-        }}
-        onCancel={() => setConflictModal(null)}
       />
     </div>
   );

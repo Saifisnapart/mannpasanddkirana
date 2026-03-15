@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { FilterState } from '@/types';
-import { vendors, products, vendorListings } from '@/data/sampleData';
+import { vendors, products } from '@/data/sampleData';
 import { useMemo } from 'react';
 
 interface FilterDrawerProps {
@@ -18,7 +18,7 @@ export default function FilterDrawer({ open, onOpenChange, filters, onFiltersCha
   const availableBrands = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const matchingProducts = products.filter(p =>
-      p.searchTerms.some(t => t.includes(q)) || p.name.toLowerCase().includes(q)
+      p.searchTerms.some(t => t.includes(q)) || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
     );
     return [...new Set(matchingProducts.map(p => p.brand))];
   }, [searchQuery]);
@@ -52,7 +52,6 @@ export default function FilterDrawer({ open, onOpenChange, filters, onFiltersCha
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
-          {/* Brand */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2">Brand</h4>
             <div className="flex flex-wrap gap-2">
@@ -70,7 +69,6 @@ export default function FilterDrawer({ open, onOpenChange, filters, onFiltersCha
             </div>
           </div>
 
-          {/* Locality */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2">Locality</h4>
             <div className="flex flex-wrap gap-2">
@@ -88,7 +86,6 @@ export default function FilterDrawer({ open, onOpenChange, filters, onFiltersCha
             </div>
           </div>
 
-          {/* Toggles */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="instock" className="text-sm">In stock only</Label>

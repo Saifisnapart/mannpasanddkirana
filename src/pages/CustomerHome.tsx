@@ -1,16 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import TopSearchBar from '@/components/layout/TopSearchBar';
 import { Card } from '@/components/ui/card';
-import { vendors, categories, quickSearches, products } from '@/data/sampleData';
-import { Star, MapPin, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { vendors, categories, quickSearches, products, popularItems } from '@/data/sampleData';
+import { Star, MapPin, Clock, ArrowRight, Store as StoreIcon } from 'lucide-react';
+import { useLocation } from '@/contexts/LocationContext';
 
 export default function CustomerHome() {
   const navigate = useNavigate();
+  const { userLocation, areaName } = useLocation();
 
   const emojis: Record<string, string> = {
     Dairy: '🥛', Staples: '🌾', Oils: '🫒', Snacks: '🍪', Beverages: '☕',
-    Cleaning: '🧹', 'Personal Care': '🧴', Fruits: '🍎', Vegetables: '🥬', Gourmet: '🧀'
+    Cleaning: '🧹', 'Personal Care': '🧴', Fruits: '🍎', Vegetables: '🥬', Meat: '🍗'
   };
 
   return (
@@ -18,18 +20,26 @@ export default function CustomerHome() {
       {/* Logo + Location */}
       <div className="flex items-center justify-between md:hidden">
         <div>
-          <h1 className="font-display text-lg font-bold text-foreground">VendorChoice</h1>
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Pimpri-Chinchwad, Pune</p>
+          <h1 className="font-display text-lg font-bold text-foreground">MannPasandd</h1>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {areaName || 'Pimpri-Chinchwad, Pune'}
+            {userLocation && (
+              <button onClick={() => navigate('/shops')} className="text-primary ml-1 underline">Change</button>
+            )}
+          </p>
         </div>
+        <Button size="sm" variant="outline" onClick={() => navigate('/shops')} className="text-xs h-7 rounded-lg gap-1">
+          <StoreIcon className="h-3 w-3" /> Nearby Shops
+        </Button>
       </div>
 
-      {/* Search */}
       <TopSearchBar showChips />
 
-      {/* Popular Categories */}
+      {/* Categories */}
       <section>
         <h2 className="font-display text-base font-bold text-foreground mb-3">Popular Categories</h2>
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+        <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
           {categories.map(cat => (
             <button
               key={cat}
@@ -47,19 +57,21 @@ export default function CustomerHome() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-base font-bold text-foreground">Nearby Vendors</h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/shops')} className="text-xs text-primary h-7">
+            Browse by Location <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
         </div>
         <div className="space-y-2">
           {vendors.map(v => (
-            <Card
-              key={v.id}
-              className="p-3 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/vendors/${v.slug}`)}
-            >
+            <Card key={v.id} className="p-3 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/vendors/${v.slug}`)}>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">🏪</div>
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">{v.image}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm text-foreground truncate">{v.name}</h3>
+                    {v.type === 'meat' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">Meat</span>
+                    )}
                     {v.isOpen ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Open</span>
                     ) : (
@@ -85,7 +97,7 @@ export default function CustomerHome() {
       <section>
         <h2 className="font-display text-base font-bold text-foreground mb-3">Frequently Bought</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          {quickSearches.slice(0, 8).map(item => (
+          {quickSearches.slice(0, 10).map(item => (
             <button
               key={item}
               onClick={() => navigate(`/search?q=${encodeURIComponent(item)}`)}
@@ -104,7 +116,7 @@ export default function CustomerHome() {
       <section className="pb-4">
         <h2 className="font-display text-base font-bold text-foreground mb-3">Suggested Reorders</h2>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Amul Curd', 'Aashirvaad Atta', 'Amul Milk'].map(item => (
+          {['Amul Curd', 'Aashirvaad Atta', 'Amul Milk', 'Chicken Curry Cut'].map(item => (
             <Card key={item} className="shrink-0 p-3 w-36 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/search?q=${encodeURIComponent(item.split(' ').pop() || '')}`)}>
               <div className="w-full h-16 rounded-lg bg-secondary flex items-center justify-center text-2xl mb-2">🛒</div>
               <p className="text-xs font-medium text-foreground truncate">{item}</p>

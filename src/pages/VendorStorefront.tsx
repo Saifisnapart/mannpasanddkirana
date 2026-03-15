@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getVendorBySlug, getVendorListings, getProduct, formatPrice, formatQuantity, categories } from '@/data/sampleData';
+import { getVendorBySlug, getVendorListings, getProduct, categories } from '@/data/sampleData';
 import ProductCard from '@/components/product/ProductCard';
-import CartConflictModal from '@/components/cart/CartConflictModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +13,9 @@ export default function VendorStorefront() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const vendor = getVendorBySlug(slug || '');
-  const { addItem, switchVendorAndAdd, vendorName } = useCart();
+  const { addItem } = useCart();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [conflictListingId, setConflictListingId] = useState<string | null>(null);
 
   if (!vendor) {
     return (
@@ -38,25 +36,19 @@ export default function VendorStorefront() {
   });
 
   const handleAdd = (listingId: string) => {
-    const result = addItem(listingId);
-    if (result === 'conflict') {
-      setConflictListingId(listingId);
-    } else {
-      toast.success('Added to cart!');
-    }
+    addItem(listingId);
+    toast.success('Added to cart!');
   };
 
   return (
     <div className="px-4 py-4 space-y-4">
-      {/* Back button */}
       <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
-      {/* Vendor Banner */}
       <div className="rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 p-5">
         <div className="flex items-start gap-3">
-          <div className="h-14 w-14 rounded-xl bg-card flex items-center justify-center text-2xl shrink-0 shadow-sm">🏪</div>
+          <div className="h-14 w-14 rounded-xl bg-card flex items-center justify-center text-2xl shrink-0 shadow-sm">{vendor.image}</div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-lg font-bold text-foreground">{vendor.name}</h1>
@@ -77,7 +69,6 @@ export default function VendorStorefront() {
         </div>
       </div>
 
-      {/* Search within vendor */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -88,7 +79,6 @@ export default function VendorStorefront() {
         />
       </div>
 
-      {/* Category tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         <button
           onClick={() => setActiveCategory(null)}
@@ -111,7 +101,6 @@ export default function VendorStorefront() {
         ))}
       </div>
 
-      {/* Product grid */}
       {filteredListings.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {filteredListings.map(listing => (
@@ -121,20 +110,6 @@ export default function VendorStorefront() {
       ) : (
         <div className="text-center py-12 text-muted-foreground text-sm">No products found</div>
       )}
-
-      <CartConflictModal
-        open={!!conflictListingId}
-        currentVendor={vendorName || ''}
-        newVendor={vendor.name}
-        onConfirm={() => {
-          if (conflictListingId) {
-            switchVendorAndAdd(conflictListingId);
-            toast.success('Cart cleared. Item added!');
-          }
-          setConflictListingId(null);
-        }}
-        onCancel={() => setConflictListingId(null)}
-      />
     </div>
   );
 }

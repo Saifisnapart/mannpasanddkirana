@@ -1,19 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { sampleAddresses, formatPrice, getVendor, getListing, getProduct } from '@/data/sampleData';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { MapPin, Truck, Store, CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { MapPin, Truck, CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { vendorId, items, subtotal, clearCart } = useCart();
-  const vendor = vendorId ? getVendor(vendorId) : null;
+  const { items, subtotal, clearCart, vendorIds } = useCart();
+  const { userLocation } = useLocation();
   const [selectedAddress, setSelectedAddress] = useState(sampleAddresses[0].id);
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -24,8 +23,10 @@ export default function Checkout() {
     return null;
   }
 
-  const deliveryFee = subtotal >= (vendor?.minOrder || 0) ? 0 : 25;
-  const total = subtotal + (deliveryType === 'delivery' ? deliveryFee : 0);
+  const isMultiVendor = vendorIds.length > 1;
+  const deliveryFee = isMultiVendor ? 80 : 40;
+  const taxAmount = Math.round(subtotal * 0.05);
+  const total = subtotal + (deliveryType === 'delivery' ? deliveryFee : 0) + taxAmount;
 
   const handlePlaceOrder = () => {
     setOrderPlaced(true);
@@ -81,7 +82,7 @@ export default function Checkout() {
             <RadioGroupItem value="delivery" />
             <div>
               <p className="text-sm font-medium text-foreground">Home Delivery</p>
-              <p className="text-xs text-muted-foreground">{vendor?.deliveryEstimate || '30-45 min'}</p>
+              <p className="text-xs text-muted-foreground">20-45 min</p>
             </div>
           </label>
           <label className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${deliveryType === 'pickup' ? 'border-primary bg-primary/5' : 'border-border'}`}>
@@ -99,12 +100,13 @@ export default function Checkout() {
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1"><CreditCard className="h-4 w-4" /> Payment Method</h2>
         <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2">
           {[
-            { value: 'cod', label: 'Cash on Delivery', desc: 'Pay when you receive' },
-            { value: 'upi', label: 'UPI', desc: 'Google Pay, PhonePe, etc.' },
-            { value: 'card', label: 'Card', desc: 'Debit or Credit card' },
+            { value: 'cod', icon: '💵', label: 'Cash on Delivery', desc: 'Pay when you receive' },
+            { value: 'upi', icon: '📱', label: 'UPI', desc: 'Google Pay, PhonePe, etc.' },
+            { value: 'card', icon: '💳', label: 'Card', desc: 'Debit or Credit card' },
           ].map(m => (
             <label key={m.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${paymentMethod === m.value ? 'border-primary bg-primary/5' : 'border-border'}`}>
               <RadioGroupItem value={m.value} />
+              <span className="text-xl">{m.icon}</span>
               <div>
                 <p className="text-sm font-medium text-foreground">{m.label}</p>
                 <p className="text-xs text-muted-foreground">{m.desc}</p>
@@ -117,7 +119,7 @@ export default function Checkout() {
       {/* Order Summary */}
       <Card className="p-4 space-y-2">
         <h2 className="text-sm font-semibold text-foreground mb-2">Order Summary</h2>
-        {items.map(item => {
+        {items.slice(0, 5).map(item => {
           const listing = getListing(item.listingId);
           const product = listing ? getProduct(listing.productId) : null;
           if (!listing || !product) return null;
@@ -128,19 +130,26 @@ export default function Checkout() {
             </div>
           );
         })}
-        <div className="border-t pt-2 flex justify-between text-sm">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span className="text-foreground">{formatPrice(subtotal)}</span>
-        </div>
-        {deliveryType === 'delivery' && (
+        {items.length > 5 && <p className="text-xs text-muted-foreground">+{items.length - 5} more items</p>}
+        <div className="border-t pt-2 space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Delivery</span>
-            <span className="text-foreground">{deliveryFee === 0 ? 'Free' : formatPrice(deliveryFee)}</span>
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="text-foreground">{formatPrice(subtotal)}</span>
           </div>
-        )}
-        <div className="border-t pt-2 flex justify-between text-base font-bold">
-          <span>Total</span>
-          <span>{formatPrice(total)}</span>
+          {deliveryType === 'delivery' && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Delivery {isMultiVendor ? '(split)' : ''}</span>
+              <span className="text-foreground">{formatPrice(deliveryFee)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Tax (5%)</span>
+            <span className="text-foreground">{formatPrice(taxAmount)}</span>
+          </div>
+          <div className="border-t pt-2 flex justify-between text-base font-bold">
+            <span>Total</span>
+            <span>{formatPrice(total)}</span>
+          </div>
         </div>
       </Card>
 
