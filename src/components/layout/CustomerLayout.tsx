@@ -1,23 +1,33 @@
 import { Outlet, Link } from 'react-router-dom';
 import MobileBottomNav from './MobileBottomNav';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart, Store } from 'lucide-react';
+import { useLocation } from '@/contexts/LocationContext';
+import { ShoppingCart, Store, MapPin } from 'lucide-react';
 
 export default function CustomerLayout() {
   const { totalItems } = useCart();
+  const { areaName } = useLocation();
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       {/* Desktop top nav */}
       <header className="hidden md:block sticky top-0 z-40 bg-card border-b shadow-sm">
         <div className="container flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <Store className="h-6 w-6 text-primary" />
-            <span className="font-display text-xl font-bold text-foreground">VendorChoice</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2">
+              <Store className="h-6 w-6 text-primary" />
+              <span className="font-display text-xl font-bold text-foreground">MannPasandd</span>
+            </Link>
+            {areaName && (
+              <Link to="/shops" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <MapPin className="h-3 w-3" /> {areaName}
+              </Link>
+            )}
+          </div>
           <nav className="flex items-center gap-6">
             <Link to="/home" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Home</Link>
             <Link to="/search" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Search</Link>
+            <Link to="/shops" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Shops</Link>
             <Link to="/orders" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Orders</Link>
             <Link to="/profile" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Profile</Link>
             <Link to="/cart" className="relative">

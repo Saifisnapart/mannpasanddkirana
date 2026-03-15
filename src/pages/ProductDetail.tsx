@@ -4,7 +4,6 @@ import { getListing, getProduct, getVendor, vendorListings, formatQuantity, form
 import PriceDisplay from '@/components/product/PriceDisplay';
 import { StockBadge } from '@/components/product/Badges';
 import VendorComparisonCard from '@/components/product/VendorComparisonCard';
-import CartConflictModal from '@/components/cart/CartConflictModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Star, MapPin, Clock, Minus, Plus } from 'lucide-react';
@@ -17,9 +16,8 @@ export default function ProductDetail() {
   const listing = getListing(id || '');
   const product = listing ? getProduct(listing.productId) : null;
   const vendor = listing ? getVendor(listing.vendorId) : null;
-  const { addItem, switchVendorAndAdd, vendorName, items, updateQty } = useCart();
+  const { addItem, items, updateQty } = useCart();
   const [qty, setQty] = useState(1);
-  const [conflictListingId, setConflictListingId] = useState<string | null>(null);
 
   if (!listing || !product || !vendor) {
     return (
@@ -31,30 +29,19 @@ export default function ProductDetail() {
   }
 
   const cartItem = items.find(i => i.listingId === listing.id);
-
-  // Other vendors offering same product
   const otherListings = vendorListings.filter(l => l.productId === listing.productId && l.id !== listing.id);
 
   const handleAdd = () => {
-    const result = addItem(listing.id);
-    if (result === 'conflict') {
-      setConflictListingId(listing.id);
-    } else {
-      // Add additional qty if needed
-      if (qty > 1) {
-        updateQty(listing.id, qty);
-      }
-      toast.success('Added to cart!');
+    addItem(listing.id);
+    if (qty > 1) {
+      updateQty(listing.id, qty);
     }
+    toast.success('Added to cart!');
   };
 
   const handleChooseOtherVendor = (listingId: string) => {
-    const result = addItem(listingId);
-    if (result === 'conflict') {
-      setConflictListingId(listingId);
-    } else {
-      toast.success('Added to cart!');
-    }
+    addItem(listingId);
+    toast.success('Added to cart!');
   };
 
   return (
@@ -63,12 +50,10 @@ export default function ProductDetail() {
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
-      {/* Product image */}
       <div className="w-full aspect-square max-w-xs mx-auto rounded-2xl bg-secondary flex items-center justify-center text-7xl">
         {product.image}
       </div>
 
-      {/* Info */}
       <div>
         <h1 className="font-display text-xl font-bold text-foreground">{product.brand} {product.name}</h1>
         <p className="text-sm text-muted-foreground">{formatQuantity(listing.quantity, listing.unit)}</p>
@@ -77,11 +62,10 @@ export default function ProductDetail() {
         {product.description && <p className="text-sm text-muted-foreground mt-3">{product.description}</p>}
       </div>
 
-      {/* Vendor info */}
       <Card className="p-3">
         <p className="text-xs text-muted-foreground mb-1">Sold by</p>
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/vendors/${vendor.slug}`)}>
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm">🏪</div>
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm">{vendor.image}</div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">{vendor.name}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -93,7 +77,6 @@ export default function ProductDetail() {
         </div>
       </Card>
 
-      {/* Qty + Add to cart */}
       <div className="flex items-center gap-4">
         {!cartItem && (
           <div className="flex items-center gap-2 bg-secondary rounded-xl px-2 py-1">
@@ -126,7 +109,6 @@ export default function ProductDetail() {
         )}
       </div>
 
-      {/* Compare from other vendors */}
       {otherListings.length > 0 && (
         <section>
           <h2 className="font-display text-base font-bold text-foreground mb-3">Compare from Other Vendors</h2>
@@ -138,25 +120,10 @@ export default function ProductDetail() {
                 isLowestPrice={l.price <= Math.min(...otherListings.map(x => x.price), listing.price)}
                 onChooseVendor={handleChooseOtherVendor}
               />
-            ))
-          }
+            ))}
           </div>
         </section>
       )}
-
-      <CartConflictModal
-        open={!!conflictListingId}
-        currentVendor={vendorName || ''}
-        newVendor={conflictListingId ? getVendor(getListing(conflictListingId)?.vendorId || '')?.name || '' : ''}
-        onConfirm={() => {
-          if (conflictListingId) {
-            switchVendorAndAdd(conflictListingId);
-            toast.success('Cart cleared. Item added!');
-          }
-          setConflictListingId(null);
-        }}
-        onCancel={() => setConflictListingId(null)}
-      />
     </div>
   );
 }

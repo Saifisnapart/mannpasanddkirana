@@ -3,11 +3,13 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, MapPin, Store, Settings, LogOut } from 'lucide-react';
+import { User, MapPin, Store, Settings, LogOut, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from '@/contexts/LocationContext';
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { areaName } = useLocation();
 
   return (
     <div className="px-4 py-4 space-y-5">
@@ -30,8 +32,8 @@ export default function Profile() {
             <Input defaultValue="ravi@example.com" className="h-9 text-sm rounded-lg" />
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Preferred Pincode</Label>
-            <Input defaultValue="411018" className="h-9 text-sm rounded-lg" />
+            <Label className="text-xs text-muted-foreground">Preferred Area</Label>
+            <Input defaultValue={areaName || 'Pimpri'} className="h-9 text-sm rounded-lg" />
           </div>
         </div>
         <Button size="sm" className="rounded-lg text-xs">Save Changes</Button>
@@ -56,13 +58,13 @@ export default function Profile() {
       <Card className="p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-1"><Store className="h-4 w-4" /> Recent Vendors</h2>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {vendors.slice(0, 3).map(v => (
+          {vendors.slice(0, 5).map(v => (
             <button
               key={v.id}
               onClick={() => navigate(`/vendors/${v.slug}`)}
               className="shrink-0 flex flex-col items-center gap-1 p-2 rounded-xl bg-secondary w-20"
             >
-              <span className="text-lg">🏪</span>
+              <span className="text-lg">{v.image}</span>
               <span className="text-[10px] font-medium text-foreground text-center leading-tight">{v.name}</span>
             </button>
           ))}
@@ -71,6 +73,9 @@ export default function Profile() {
 
       {/* Actions */}
       <div className="space-y-2">
+        <Button variant="outline" className="w-full justify-start gap-2 rounded-lg text-sm h-10">
+          <Navigation className="h-4 w-4" /> Set Default Location
+        </Button>
         <Button variant="outline" className="w-full justify-start gap-2 rounded-lg text-sm h-10">
           <Settings className="h-4 w-4" /> Settings
         </Button>

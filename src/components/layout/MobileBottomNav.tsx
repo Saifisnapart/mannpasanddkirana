@@ -1,18 +1,18 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, ShoppingCart, ClipboardList, User } from 'lucide-react';
+import { Link, useLocation as useRouterLocation } from 'react-router-dom';
+import { Home, Search, ShoppingCart, ClipboardList, User, Store } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/home', label: 'Home', icon: Home },
   { path: '/search', label: 'Search', icon: Search },
+  { path: '/shops', label: 'Shops', icon: Store },
   { path: '/cart', label: 'Cart', icon: ShoppingCart },
   { path: '/orders', label: 'Orders', icon: ClipboardList },
-  { path: '/profile', label: 'Profile', icon: User },
 ];
 
 export default function MobileBottomNav() {
-  const location = useLocation();
+  const location = useRouterLocation();
   const { totalItems } = useCart();
 
   return (
