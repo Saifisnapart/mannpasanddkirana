@@ -120,9 +120,21 @@ export default function Cart() {
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-medium text-foreground">{formatPrice(Math.round(subtotal))}</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Delivery Fee {isMultiVendor ? '(split order)' : ''}</span>
-          <span className="font-medium text-foreground">{formatPrice(deliveryFee)}</span>
+        <div className="space-y-1">
+          {vendorDeliveryInfo.map(d => (
+            <div key={d.vendorId} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                Delivery{isMultiVendor && d.name ? ` (${d.name})` : ''} · {d.distance} km
+              </span>
+              <span className="font-medium text-foreground">{formatPrice(d.fee)}</span>
+            </div>
+          ))}
+          {isMultiVendor && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total Delivery</span>
+              <span className="font-medium text-foreground">{formatPrice(totalDeliveryFee)}</span>
+            </div>
+          )}
         </div>
         <div className="border-t pt-2 flex justify-between text-base">
           <span className="font-semibold text-foreground">Total</span>
