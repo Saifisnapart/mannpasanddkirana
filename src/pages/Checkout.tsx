@@ -25,10 +25,21 @@ export default function Checkout() {
     return null;
   }
 
+  const selectedAddr = sampleAddresses.find(a => a.id === selectedAddress);
+  const deliveryLat = selectedAddr?.lat || userLocation?.lat || 18.6285;
+  const deliveryLng = selectedAddr?.lng || userLocation?.lng || 73.8010;
+
+  const vendorDeliveryInfo = vendorIds.map(vId => {
+    const vendor = getVendor(vId);
+    if (!vendor) return { vendorId: vId, distance: 0, fee: 10, name: '' };
+    const dist = calculateDistance(deliveryLat, deliveryLng, vendor.lat, vendor.lng);
+    return { vendorId: vId, distance: dist, fee: calculateDeliveryFee(dist), name: vendor.name };
+  });
+
+  const totalDeliveryFee = vendorDeliveryInfo.reduce((sum, v) => sum + v.fee, 0);
   const isMultiVendor = vendorIds.length > 1;
-  const deliveryFee = isMultiVendor ? 80 : 40;
   const taxAmount = Math.round(subtotal * 0.05);
-  const total = subtotal + (deliveryType === 'delivery' ? deliveryFee : 0) + taxAmount;
+  const total = subtotal + (deliveryType === 'delivery' ? totalDeliveryFee : 0) + taxAmount;
 
   const handlePlaceOrder = () => {
     setOrderPlaced(true);
