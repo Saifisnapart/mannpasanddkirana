@@ -136,10 +136,18 @@ export default function Checkout() {
           const listing = getListing(item.listingId);
           const product = listing ? getProduct(listing.productId) : null;
           if (!listing || !product) return null;
+          const unitType = getUnitType(listing.unit);
+          const isCountable = unitType === 'pcs';
+          const itemPrice = isCountable || !item.customQty
+            ? listing.price * item.qty
+            : calcCustomPrice(listing.price, listing.quantity, listing.unit, item.customQty);
+          const qtyLabel = isCountable
+            ? `x ${item.qty}`
+            : item.customQty ? formatCustomQty(item.customQty, unitType) : `x ${item.qty}`;
           return (
             <div key={item.listingId} className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{product.brand} {product.name} x {item.qty}</span>
-              <span className="text-foreground">{formatPrice(listing.price * item.qty)}</span>
+              <span className="text-muted-foreground">{product.brand} {product.name} · {qtyLabel}</span>
+              <span className="text-foreground">{formatPrice(Math.round(itemPrice))}</span>
             </div>
           );
         })}
@@ -147,12 +155,24 @@ export default function Checkout() {
         <div className="border-t pt-2 space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="text-foreground">{formatPrice(subtotal)}</span>
+            <span className="text-foreground">{formatPrice(Math.round(subtotal))}</span>
           </div>
           {deliveryType === 'delivery' && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Delivery {isMultiVendor ? '(split)' : ''}</span>
-              <span className="text-foreground">{formatPrice(deliveryFee)}</span>
+            <div className="space-y-1">
+              {vendorDeliveryInfo.map(d => (
+                <div key={d.vendorId} className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Delivery{isMultiVendor && d.name ? ` (${d.name})` : ''} · {d.distance} km
+                  </span>
+                  <span className="text-foreground">{formatPrice(d.fee)}</span>
+                </div>
+              ))}
+              {isMultiVendor && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Delivery</span>
+                  <span className="text-foreground">{formatPrice(totalDeliveryFee)}</span>
+                </div>
+              )}
             </div>
           )}
           <div className="flex justify-between text-sm">
@@ -161,7 +181,7 @@ export default function Checkout() {
           </div>
           <div className="border-t pt-2 flex justify-between text-base font-bold">
             <span>Total</span>
-            <span>{formatPrice(total)}</span>
+            <span>{formatPrice(Math.round(total))}</span>
           </div>
         </div>
       </Card>
