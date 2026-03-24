@@ -77,6 +77,7 @@ export default function Cart() {
         const vendor = getVendor(vId);
         if (!vendor) return null;
         const vSubtotal = vItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+        const vDelivery = vendorDeliveryInfo.find(d => d.vendorId === vId);
 
         return (
           <Card key={vId} className={`p-4 ${idx === 0 ? 'border-primary/30 border-2' : ''}`}>
