@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { getListing, getProduct, getVendor, vendorListings, formatQuantity, formatPrice } from '@/data/sampleData';
+import { getListing, getProduct, getVendor, vendorListings, formatQuantity, formatPrice, getUnitType, toBaseUnit, formatCustomQty, calcCustomPrice } from '@/data/sampleData';
 import PriceDisplay from '@/components/product/PriceDisplay';
 import { StockBadge } from '@/components/product/Badges';
 import VendorComparisonCard from '@/components/product/VendorComparisonCard';
+import QuantityInput from '@/components/product/QuantityInput';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Star, MapPin, Clock, Minus, Plus } from 'lucide-react';
@@ -16,8 +17,14 @@ export default function ProductDetail() {
   const listing = getListing(id || '');
   const product = listing ? getProduct(listing.productId) : null;
   const vendor = listing ? getVendor(listing.vendorId) : null;
-  const { addItem, items, updateQty } = useCart();
+  const { addItem, items, updateQty, updateCustomQty } = useCart();
+
+  const unitType = listing ? getUnitType(listing.unit) : 'pcs';
+  const isCountable = unitType === 'pcs';
+  const baseQty = listing ? toBaseUnit(listing.quantity, listing.unit) : 0;
+
   const [qty, setQty] = useState(1);
+  const [customQty, setCustomQty] = useState(isCountable ? 0 : baseQty);
 
   if (!listing || !product || !vendor) {
     return (
@@ -31,9 +38,13 @@ export default function ProductDetail() {
   const cartItem = items.find(i => i.listingId === listing.id);
   const otherListings = vendorListings.filter(l => l.productId === listing.productId && l.id !== listing.id);
 
+  const displayPrice = isCountable
+    ? listing.price * qty
+    : calcCustomPrice(listing.price, listing.quantity, listing.unit, customQty);
+
   const handleAdd = () => {
-    addItem(listing.id);
-    if (qty > 1) {
+    addItem(listing.id, isCountable ? undefined : customQty);
+    if (isCountable && qty > 1) {
       updateQty(listing.id, qty);
     }
     toast.success('Added to cart!');
@@ -77,37 +88,62 @@ export default function ProductDetail() {
         </div>
       </Card>
 
-      <div className="flex items-center gap-4">
-        {!cartItem && (
-          <div className="flex items-center gap-2 bg-secondary rounded-xl px-2 py-1">
-            <button onClick={() => setQty(Math.max(1, qty - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/10">
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="w-8 text-center font-bold">{qty}</span>
-            <button onClick={() => setQty(qty + 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/10">
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        {cartItem ? (
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex items-center gap-2 bg-primary/10 rounded-xl px-3 py-1">
-              <button onClick={() => updateQty(listing.id, cartItem.qty - 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/20 text-primary">
-                <Minus className="h-4 w-4" />
-              </button>
-              <span className="w-8 text-center font-bold text-primary">{cartItem.qty}</span>
-              <button onClick={() => updateQty(listing.id, cartItem.qty + 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/20 text-primary">
-                <Plus className="h-4 w-4" />
-              </button>
+      {/* Quantity selector */}
+      <Card className="p-4">
+        <p className="text-xs font-medium text-muted-foreground mb-2">
+          {isCountable ? 'Select Quantity' : `Choose your quantity (min 100 ${unitType === 'g' ? 'gm' : 'ml'}, step 10)`}
+        </p>
+        <div className="flex items-center gap-4">
+          {!cartItem && (
+            <>
+              {isCountable ? (
+                <div className="flex items-center gap-2 bg-secondary rounded-xl px-2 py-1">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/10">
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-8 text-center font-bold">{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/10">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <QuantityInput
+                  value={customQty}
+                  onChange={setCustomQty}
+                  unitType={unitType as 'g' | 'ml'}
+                />
+              )}
+            </>
+          )}
+          {cartItem ? (
+            <div className="flex items-center gap-3 flex-1">
+              {isCountable ? (
+                <div className="flex items-center gap-2 bg-primary/10 rounded-xl px-3 py-1">
+                  <button onClick={() => updateQty(listing.id, cartItem.qty - 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/20 text-primary">
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-8 text-center font-bold text-primary">{cartItem.qty}</span>
+                  <button onClick={() => updateQty(listing.id, cartItem.qty + 1)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-primary/20 text-primary">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <QuantityInput
+                  value={cartItem.customQty || baseQty}
+                  onChange={(v) => updateCustomQty(listing.id, v)}
+                  unitType={unitType as 'g' | 'ml'}
+                />
+              )}
+              <Button onClick={() => navigate('/cart')} className="flex-1 rounded-xl h-11">View Cart</Button>
             </div>
-            <Button onClick={() => navigate('/cart')} className="flex-1 rounded-xl h-11">View Cart</Button>
-          </div>
-        ) : (
-          <Button onClick={handleAdd} disabled={listing.stock === 'out_of_stock'} className="flex-1 rounded-xl h-11 text-base font-semibold">
-            Add to Cart · {formatPrice(listing.price * qty)}
-          </Button>
-        )}
-      </div>
+          ) : (
+            <Button onClick={handleAdd} disabled={listing.stock === 'out_of_stock'} className="flex-1 rounded-xl h-11 text-base font-semibold">
+              Add · {formatPrice(Math.round(displayPrice))}
+              {!isCountable && <span className="text-xs font-normal ml-1 opacity-80">({formatCustomQty(customQty, unitType)})</span>}
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {otherListings.length > 0 && (
         <section>

@@ -4,14 +4,14 @@ import CartItemCard from '@/components/cart/CartItem';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatPrice, getVendor, getListing } from '@/data/sampleData';
-import { Store, Clock, Trash2, ArrowRight, Info, Truck } from 'lucide-react';
+import { formatPrice, getVendor, getListing, getUnitType, toBaseUnit, calcCustomPrice } from '@/data/sampleData';
+import { Clock, Trash2, ArrowRight, Truck } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
 import { calculateSplitOrder } from '@/lib/utils';
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { items, updateQty, removeItem, clearCart, subtotal, vendorIds, vendorNames } = useCart();
+  const { items, updateQty, updateCustomQty, removeItem, clearCart, subtotal, vendorIds, vendorNames } = useCart();
   const { userLocation } = useLocation();
 
   if (items.length === 0) {
@@ -36,6 +36,16 @@ export default function Cart() {
     groupedItems.set(listing.vendorId, group);
   }
 
+  const getItemTotal = (item: typeof items[0]) => {
+    const listing = getListing(item.listingId);
+    if (!listing) return 0;
+    const unitType = getUnitType(listing.unit);
+    if (unitType === 'pcs' || !item.customQty) {
+      return listing.price * item.qty;
+    }
+    return calcCustomPrice(listing.price, listing.quantity, listing.unit, item.customQty);
+  };
+
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -54,14 +64,10 @@ export default function Cart() {
         </div>
       )}
 
-      {/* Grouped by vendor */}
       {Array.from(groupedItems.entries()).map(([vId, vItems], idx) => {
         const vendor = getVendor(vId);
         if (!vendor) return null;
-        const vSubtotal = vItems.reduce((sum, item) => {
-          const listing = getListing(item.listingId);
-          return sum + (listing ? listing.price * item.qty : 0);
-        }, 0);
+        const vSubtotal = vItems.reduce((sum, item) => sum + getItemTotal(item), 0);
 
         return (
           <Card key={vId} className={`p-4 ${idx === 0 ? 'border-primary/30 border-2' : ''}`}>
@@ -79,21 +85,20 @@ export default function Cart() {
               )}
             </div>
             {vItems.map(item => (
-              <CartItemCard key={item.listingId} item={item} onUpdateQty={updateQty} onRemove={removeItem} />
+              <CartItemCard key={item.listingId} item={item} onUpdateQty={updateQty} onUpdateCustomQty={updateCustomQty} onRemove={removeItem} />
             ))}
             <div className="mt-2 pt-2 border-t border-border flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal from {vendor.name}</span>
-              <span className="font-medium text-foreground">{formatPrice(vSubtotal)}</span>
+              <span className="font-medium text-foreground">{formatPrice(Math.round(vSubtotal))}</span>
             </div>
           </Card>
         );
       })}
 
-      {/* Summary */}
       <Card className="p-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium text-foreground">{formatPrice(subtotal)}</span>
+          <span className="font-medium text-foreground">{formatPrice(Math.round(subtotal))}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Delivery Fee {isMultiVendor ? '(split order)' : ''}</span>
@@ -101,12 +106,12 @@ export default function Cart() {
         </div>
         <div className="border-t pt-2 flex justify-between text-base">
           <span className="font-semibold text-foreground">Total</span>
-          <span className="font-bold text-foreground">{formatPrice(total)}</span>
+          <span className="font-bold text-foreground">{formatPrice(Math.round(total))}</span>
         </div>
       </Card>
 
       <Button onClick={() => navigate('/checkout')} className="w-full h-12 rounded-xl text-base font-semibold">
-        Proceed to Checkout · {formatPrice(total)} <ArrowRight className="h-4 w-4 ml-1" />
+        Proceed to Checkout · {formatPrice(Math.round(total))} <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
     </div>
   );
