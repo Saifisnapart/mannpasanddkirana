@@ -327,3 +327,42 @@ export function getDiscountPercent(price: number, mrp?: number): number | null {
   if (!mrp || mrp <= price) return null;
   return Math.round(((mrp - price) / mrp) * 100);
 }
+
+/** Determine if a listing uses weight (g), volume (ml), or count (pcs) */
+export function getUnitType(unit: string): 'g' | 'ml' | 'pcs' {
+  const u = unit.toLowerCase();
+  if (u === 'ml' || u === 'l') return 'ml';
+  if (u === 'pcs' || u === 'dozen') return 'pcs';
+  return 'g'; // g, kg
+}
+
+/** Convert listing quantity to base unit (grams or ml) */
+export function toBaseUnit(quantity: number, unit: string): number {
+  const u = unit.toLowerCase();
+  if (u === 'kg') return quantity * 1000;
+  if (u === 'l') return quantity * 1000;
+  return quantity; // g, ml, pcs
+}
+
+/** Get price per base unit (per gram or per ml) */
+export function getPricePerBaseUnit(price: number, quantity: number, unit: string): number {
+  const base = toBaseUnit(quantity, unit);
+  return price / base;
+}
+
+/** Format custom quantity with proper unit display */
+export function formatCustomQty(qty: number, unitType: 'g' | 'ml' | 'pcs'): string {
+  if (unitType === 'pcs') return `${qty} pcs`;
+  if (qty >= 1000) {
+    const big = qty / 1000;
+    const label = unitType === 'g' ? 'kg' : 'L';
+    return `${big % 1 === 0 ? big.toFixed(0) : big.toFixed(1)} ${label}`;
+  }
+  return `${qty} ${unitType === 'g' ? 'gm' : 'ml'}`;
+}
+
+/** Calculate price for a custom quantity order */
+export function calcCustomPrice(listingPrice: number, listingQty: number, listingUnit: string, customQty: number): number {
+  const pricePerUnit = getPricePerBaseUnit(listingPrice, listingQty, listingUnit);
+  return Math.round(pricePerUnit * customQty * 100) / 100;
+}

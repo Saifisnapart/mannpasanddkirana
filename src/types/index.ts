@@ -53,6 +53,8 @@ export interface VendorListing {
 export interface CartItem {
   listingId: string;
   qty: number;
+  customQty?: number;   // quantity in base unit (g or ml)
+  unitType?: 'g' | 'ml' | 'pcs';  // derived from listing unit
 }
 
 export interface CartState {
