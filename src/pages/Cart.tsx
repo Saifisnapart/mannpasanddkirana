@@ -5,9 +5,9 @@ import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatPrice, getVendor, getListing, getUnitType, toBaseUnit, calcCustomPrice } from '@/data/sampleData';
-import { Clock, Trash2, ArrowRight, Truck } from 'lucide-react';
+import { Clock, Trash2, ArrowRight, Truck, MapPin } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
-import { calculateSplitOrder } from '@/lib/utils';
+import { calculateSplitOrder, calculateDistance, calculateDeliveryFee } from '@/lib/utils';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -23,8 +23,17 @@ export default function Cart() {
     : null;
 
   const isMultiVendor = vendorIds.length > 1;
-  const deliveryFee = isMultiVendor ? 80 : 40;
-  const total = subtotal + deliveryFee;
+
+  // Calculate per-vendor delivery fees based on distance
+  const vendorDeliveryInfo = vendorIds.map(vId => {
+    const vendor = getVendor(vId);
+    if (!vendor || !userLocation) return { vendorId: vId, distance: 0, fee: 40, name: '' };
+    const dist = calculateDistance(userLocation.lat, userLocation.lng, vendor.lat, vendor.lng);
+    return { vendorId: vId, distance: dist, fee: calculateDeliveryFee(dist), name: vendor.name };
+  });
+
+  const totalDeliveryFee = vendorDeliveryInfo.reduce((sum, v) => sum + v.fee, 0);
+  const total = subtotal + totalDeliveryFee;
 
   // Group items by vendor
   const groupedItems = new Map<string, typeof items>();
