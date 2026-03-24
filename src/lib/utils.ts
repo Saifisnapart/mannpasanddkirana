@@ -72,6 +72,12 @@ export function calculateSplitOrder(cartItems: CartItem[], userLat: number, user
 
 export function formatCurrency(amount: number): string { return `₹${amount.toFixed(0)}`; }
 
+/** Distance-based delivery fee: 0-1km = ₹10, >1km = ₹10 + ₹10 per additional km (rounded up) */
+export function calculateDeliveryFee(distanceKm: number): number {
+  if (distanceKm <= 1) return 10;
+  return 10 + Math.ceil(distanceKm - 1) * 10;
+}
+
 export function getMockTrackingCoordinates(shopLat: number, shopLng: number, custLat: number, custLng: number, progress: number) {
   return { lat: shopLat + (custLat - shopLat) * progress, lng: shopLng + (custLng - shopLng) * progress };
 }
