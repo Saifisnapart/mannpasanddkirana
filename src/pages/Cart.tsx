@@ -96,9 +96,19 @@ export default function Cart() {
             {vItems.map(item => (
               <CartItemCard key={item.listingId} item={item} onUpdateQty={updateQty} onUpdateCustomQty={updateCustomQty} onRemove={removeItem} />
             ))}
-            <div className="mt-2 pt-2 border-t border-border flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal from {vendor.name}</span>
-              <span className="font-medium text-foreground">{formatPrice(Math.round(vSubtotal))}</span>
+            <div className="mt-2 pt-2 border-t border-border space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal from {vendor.name}</span>
+                <span className="font-medium text-foreground">{formatPrice(Math.round(vSubtotal))}</span>
+              </div>
+              {vDelivery && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {vDelivery.distance} km away · Delivery
+                  </span>
+                  <span className="font-medium text-foreground">{formatPrice(vDelivery.fee)}</span>
+                </div>
+              )}
             </div>
           </Card>
         );
