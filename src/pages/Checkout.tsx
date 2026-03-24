@@ -14,7 +14,6 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { items, subtotal, clearCart, vendorIds } = useCart();
   const { userLocation } = useLocation();
-  const { userLocation } = useLocation();
   const [selectedAddress, setSelectedAddress] = useState(sampleAddresses[0].id);
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState('cod');
