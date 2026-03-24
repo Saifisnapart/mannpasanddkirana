@@ -5,9 +5,9 @@ import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatPrice, getVendor, getListing, getUnitType, toBaseUnit, calcCustomPrice } from '@/data/sampleData';
-import { Clock, Trash2, ArrowRight, Truck } from 'lucide-react';
+import { Clock, Trash2, ArrowRight, Truck, MapPin } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
-import { calculateSplitOrder } from '@/lib/utils';
+import { calculateSplitOrder, calculateDistance, calculateDeliveryFee } from '@/lib/utils';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -23,8 +23,17 @@ export default function Cart() {
     : null;
 
   const isMultiVendor = vendorIds.length > 1;
-  const deliveryFee = isMultiVendor ? 80 : 40;
-  const total = subtotal + deliveryFee;
+
+  // Calculate per-vendor delivery fees based on distance
+  const vendorDeliveryInfo = vendorIds.map(vId => {
+    const vendor = getVendor(vId);
+    if (!vendor || !userLocation) return { vendorId: vId, distance: 0, fee: 40, name: '' };
+    const dist = calculateDistance(userLocation.lat, userLocation.lng, vendor.lat, vendor.lng);
+    return { vendorId: vId, distance: dist, fee: calculateDeliveryFee(dist), name: vendor.name };
+  });
+
+  const totalDeliveryFee = vendorDeliveryInfo.reduce((sum, v) => sum + v.fee, 0);
+  const total = subtotal + totalDeliveryFee;
 
   // Group items by vendor
   const groupedItems = new Map<string, typeof items>();
@@ -68,6 +77,7 @@ export default function Cart() {
         const vendor = getVendor(vId);
         if (!vendor) return null;
         const vSubtotal = vItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+        const vDelivery = vendorDeliveryInfo.find(d => d.vendorId === vId);
 
         return (
           <Card key={vId} className={`p-4 ${idx === 0 ? 'border-primary/30 border-2' : ''}`}>
@@ -87,9 +97,19 @@ export default function Cart() {
             {vItems.map(item => (
               <CartItemCard key={item.listingId} item={item} onUpdateQty={updateQty} onUpdateCustomQty={updateCustomQty} onRemove={removeItem} />
             ))}
-            <div className="mt-2 pt-2 border-t border-border flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal from {vendor.name}</span>
-              <span className="font-medium text-foreground">{formatPrice(Math.round(vSubtotal))}</span>
+            <div className="mt-2 pt-2 border-t border-border space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal from {vendor.name}</span>
+                <span className="font-medium text-foreground">{formatPrice(Math.round(vSubtotal))}</span>
+              </div>
+              {vDelivery && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {vDelivery.distance} km away · Delivery
+                  </span>
+                  <span className="font-medium text-foreground">{formatPrice(vDelivery.fee)}</span>
+                </div>
+              )}
             </div>
           </Card>
         );
@@ -100,9 +120,21 @@ export default function Cart() {
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-medium text-foreground">{formatPrice(Math.round(subtotal))}</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Delivery Fee {isMultiVendor ? '(split order)' : ''}</span>
-          <span className="font-medium text-foreground">{formatPrice(deliveryFee)}</span>
+        <div className="space-y-1">
+          {vendorDeliveryInfo.map(d => (
+            <div key={d.vendorId} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                Delivery{isMultiVendor && d.name ? ` (${d.name})` : ''} · {d.distance} km
+              </span>
+              <span className="font-medium text-foreground">{formatPrice(d.fee)}</span>
+            </div>
+          ))}
+          {isMultiVendor && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total Delivery</span>
+              <span className="font-medium text-foreground">{formatPrice(totalDeliveryFee)}</span>
+            </div>
+          )}
         </div>
         <div className="border-t pt-2 flex justify-between text-base">
           <span className="font-semibold text-foreground">Total</span>

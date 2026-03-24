@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useLocation } from '@/contexts/LocationContext';
-import { sampleAddresses, formatPrice, getVendor, getListing, getProduct } from '@/data/sampleData';
+import { sampleAddresses, formatPrice, getVendor, getListing, getProduct, getUnitType, calcCustomPrice, formatCustomQty } from '@/data/sampleData';
+import { calculateDistance, calculateDeliveryFee } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -23,10 +24,21 @@ export default function Checkout() {
     return null;
   }
 
+  const selectedAddr = sampleAddresses.find(a => a.id === selectedAddress);
+  const deliveryLat = selectedAddr?.lat || userLocation?.lat || 18.6285;
+  const deliveryLng = selectedAddr?.lng || userLocation?.lng || 73.8010;
+
+  const vendorDeliveryInfo = vendorIds.map(vId => {
+    const vendor = getVendor(vId);
+    if (!vendor) return { vendorId: vId, distance: 0, fee: 10, name: '' };
+    const dist = calculateDistance(deliveryLat, deliveryLng, vendor.lat, vendor.lng);
+    return { vendorId: vId, distance: dist, fee: calculateDeliveryFee(dist), name: vendor.name };
+  });
+
+  const totalDeliveryFee = vendorDeliveryInfo.reduce((sum, v) => sum + v.fee, 0);
   const isMultiVendor = vendorIds.length > 1;
-  const deliveryFee = isMultiVendor ? 80 : 40;
   const taxAmount = Math.round(subtotal * 0.05);
-  const total = subtotal + (deliveryType === 'delivery' ? deliveryFee : 0) + taxAmount;
+  const total = subtotal + (deliveryType === 'delivery' ? totalDeliveryFee : 0) + taxAmount;
 
   const handlePlaceOrder = () => {
     setOrderPlaced(true);
@@ -123,10 +135,18 @@ export default function Checkout() {
           const listing = getListing(item.listingId);
           const product = listing ? getProduct(listing.productId) : null;
           if (!listing || !product) return null;
+          const unitType = getUnitType(listing.unit);
+          const isCountable = unitType === 'pcs';
+          const itemPrice = isCountable || !item.customQty
+            ? listing.price * item.qty
+            : calcCustomPrice(listing.price, listing.quantity, listing.unit, item.customQty);
+          const qtyLabel = isCountable
+            ? `x ${item.qty}`
+            : item.customQty ? formatCustomQty(item.customQty, unitType) : `x ${item.qty}`;
           return (
             <div key={item.listingId} className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{product.brand} {product.name} x {item.qty}</span>
-              <span className="text-foreground">{formatPrice(listing.price * item.qty)}</span>
+              <span className="text-muted-foreground">{product.brand} {product.name} · {qtyLabel}</span>
+              <span className="text-foreground">{formatPrice(Math.round(itemPrice))}</span>
             </div>
           );
         })}
@@ -134,12 +154,24 @@ export default function Checkout() {
         <div className="border-t pt-2 space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="text-foreground">{formatPrice(subtotal)}</span>
+            <span className="text-foreground">{formatPrice(Math.round(subtotal))}</span>
           </div>
           {deliveryType === 'delivery' && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Delivery {isMultiVendor ? '(split)' : ''}</span>
-              <span className="text-foreground">{formatPrice(deliveryFee)}</span>
+            <div className="space-y-1">
+              {vendorDeliveryInfo.map(d => (
+                <div key={d.vendorId} className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Delivery{isMultiVendor && d.name ? ` (${d.name})` : ''} · {d.distance} km
+                  </span>
+                  <span className="text-foreground">{formatPrice(d.fee)}</span>
+                </div>
+              ))}
+              {isMultiVendor && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Delivery</span>
+                  <span className="text-foreground">{formatPrice(totalDeliveryFee)}</span>
+                </div>
+              )}
             </div>
           )}
           <div className="flex justify-between text-sm">
@@ -148,7 +180,7 @@ export default function Checkout() {
           </div>
           <div className="border-t pt-2 flex justify-between text-base font-bold">
             <span>Total</span>
-            <span>{formatPrice(total)}</span>
+            <span>{formatPrice(Math.round(total))}</span>
           </div>
         </div>
       </Card>
