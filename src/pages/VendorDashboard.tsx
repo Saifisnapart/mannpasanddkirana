@@ -272,7 +272,7 @@ function OrdersTab({ storeId }: { storeId: string }) {
     queryKey: ['vendor-orders', storeId, tab],
     queryFn: async () => {
       let q = supabase.from('orders').select('*, order_items(*)').eq('store_id', storeId).order('placed_at', { ascending: false });
-      if (tab !== 'all') q = q.eq('status', tab);
+      if (tab !== 'all') q = q.eq('status', tab as any);
       const { data } = await q;
       return data || [];
     },
