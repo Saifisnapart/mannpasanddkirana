@@ -58,8 +58,12 @@ const App = () => (
                   </Route>
                 </Route>
 
+                {/* Vendor protected route */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                </Route>
+
                 {/* Placeholder routes */}
-                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
                 <Route path="*" element={<NotFound />} />

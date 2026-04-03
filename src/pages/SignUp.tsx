@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ export default function SignUp() {
     { value: 'ratib', label: 'Ratib Buyer', desc: 'Daily essentials subscription' },
   ];
 
+  const isVendor = form.buyer_type === 'vendor';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -41,6 +44,16 @@ export default function SignUp() {
     if (error) {
       setError(error.message);
     } else {
+      // If vendor, also add vendor role (handle_new_user trigger adds 'customer' by default)
+      if (isVendor) {
+        // We need the user id - re-sign in to get it since email may not be confirmed
+        // The trigger already created profile+customer role, so we insert vendor role
+        const { data: signInData } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (signInData?.user) {
+          await supabase.from('user_roles').insert({ user_id: signInData.user.id, role: 'vendor' as any });
+          await supabase.auth.signOut();
+        }
+      }
       toast.success('Account created! Please check your email to verify.');
       navigate('/login');
     }
@@ -95,6 +108,18 @@ export default function SignUp() {
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={() => setForm(p => ({ ...p, buyer_type: 'vendor' }))}
+              className={`w-full mt-2 p-3 rounded-xl border text-center transition-colors ${
+                isVendor
+                  ? 'border-accent bg-accent/10 ring-2 ring-accent/30'
+                  : 'border-dashed border-accent/50 hover:border-accent'
+              }`}
+            >
+              <p className="text-xs font-semibold text-accent-foreground">🏪 Vendor / Store Owner</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Sell on MannPasandd</p>
+            </button>
           </div>
 
           {form.buyer_type === 'ratib' && (
