@@ -21,6 +21,8 @@ export default function SignUp() {
     { value: 'ratib', label: 'Ratib Buyer', desc: 'Daily essentials subscription' },
   ];
 
+  const isVendor = form.buyer_type === 'vendor';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
