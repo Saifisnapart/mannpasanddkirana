@@ -107,6 +107,18 @@ export default function SignUp() {
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={() => setForm(p => ({ ...p, buyer_type: 'vendor' }))}
+              className={`w-full mt-2 p-3 rounded-xl border text-center transition-colors ${
+                isVendor
+                  ? 'border-accent bg-accent/10 ring-2 ring-accent/30'
+                  : 'border-dashed border-accent/50 hover:border-accent'
+              }`}
+            >
+              <p className="text-xs font-semibold text-accent-foreground">🏪 Vendor / Store Owner</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Sell on MannPasandd</p>
+            </button>
           </div>
 
           {form.buyer_type === 'ratib' && (
