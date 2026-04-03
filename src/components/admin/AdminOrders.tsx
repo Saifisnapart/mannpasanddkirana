@@ -45,7 +45,7 @@ export default function AdminOrders() {
     queryFn: async () => {
       let q = supabase.from('orders').select('*, stores(name)', { count: 'exact' })
         .order('placed_at', { ascending: false });
-      if (statusFilter !== 'all') q = q.eq('status', statusFilter);
+      if (statusFilter !== 'all') q = q.eq('status', statusFilter as any);
       if (storeFilter !== 'all') q = q.eq('store_id', storeFilter);
       if (dateFrom) q = q.gte('placed_at', new Date(dateFrom).toISOString());
       if (dateTo) { const to = new Date(dateTo); to.setHours(23, 59, 59); q = q.lte('placed_at', to.toISOString()); }
