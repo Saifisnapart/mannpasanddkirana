@@ -43,6 +43,16 @@ export default function SignUp() {
     if (error) {
       setError(error.message);
     } else {
+      // If vendor, also add vendor role (handle_new_user trigger adds 'customer' by default)
+      if (isVendor) {
+        // We need the user id - re-sign in to get it since email may not be confirmed
+        // The trigger already created profile+customer role, so we insert vendor role
+        const { data: signInData } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (signInData?.user) {
+          await supabase.from('user_roles').insert({ user_id: signInData.user.id, role: 'vendor' as any });
+          await supabase.auth.signOut();
+        }
+      }
       toast.success('Account created! Please check your email to verify.');
       navigate('/login');
     }
