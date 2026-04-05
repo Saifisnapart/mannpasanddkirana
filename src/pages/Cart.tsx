@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from '@/contexts/LocationContext';
@@ -7,15 +9,16 @@ import { calculateDistance, calculateDeliveryFee } from '@/lib/utils';
 import EmptyState from '@/components/common/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Minus, Plus, Trash2, Clock, ArrowRight, Truck, MapPin } from 'lucide-react';
+import { Minus, Plus, Trash2, ArrowRight, Truck, MapPin } from 'lucide-react';
 import QuantityInput from '@/components/product/QuantityInput';
 
 export default function Cart() {
   const navigate = useNavigate();
   const { items, updateQty, updateCustomQty, removeItem, clearCart, subtotal, storeIds } = useCart();
   const { userLocation } = useLocation();
+  const { formatPrice } = useCurrency();
+  const { t } = useLanguage();
 
-  // Fetch store details for delivery calculation
   const { data: stores } = useQuery({
     queryKey: ['cartStores', storeIds],
     queryFn: async () => {
@@ -30,7 +33,6 @@ export default function Cart() {
     return <EmptyState type="cart" />;
   }
 
-  // Group items by store
   const groupedItems = new Map<string, typeof items>();
   for (const item of items) {
     const group = groupedItems.get(item.storeId) || [];
@@ -59,9 +61,9 @@ export default function Cart() {
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-xl font-bold text-foreground">Your Cart</h1>
+        <h1 className="font-display text-xl font-bold text-foreground">{t('cart')}</h1>
         <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive text-xs h-8 gap-1">
-          <Trash2 className="h-3 w-3" /> Clear All
+          <Trash2 className="h-3 w-3" /> {t('cancel')}
         </Button>
       </div>
 
@@ -91,13 +93,13 @@ export default function Cart() {
                   <p className="text-sm font-medium text-foreground truncate">{item.productName}</p>
                   <p className="text-xs text-muted-foreground">
                     {item.unitType === 'pcs'
-                      ? `${item.qty} × ₹${item.vendorPriceInr}`
+                      ? `${item.qty} × ${formatPrice(item.vendorPriceInr)}`
                       : item.customQty
                         ? `${item.customQty >= 1000 ? `${(item.customQty / 1000).toFixed(1)} ${item.unitType === 'g' ? 'kg' : 'L'}` : `${item.customQty} ${item.unitType === 'g' ? 'gm' : 'ml'}`}`
-                        : `₹${item.vendorPriceInr}`
+                        : formatPrice(item.vendorPriceInr)
                     }
                   </p>
-                  <p className="text-sm font-bold text-foreground mt-0.5">₹{Math.round(getItemPrice(item))}</p>
+                  <p className="text-sm font-bold text-foreground mt-0.5">{formatPrice(Math.round(getItemPrice(item)))}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {item.unitType === 'pcs' ? (
@@ -121,15 +123,15 @@ export default function Cart() {
             ))}
             <div className="mt-2 pt-2 border-t border-border space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium text-foreground">₹{Math.round(sSubtotal)}</span>
+                <span className="text-muted-foreground">{t('subtotal')}</span>
+                <span className="font-medium text-foreground">{formatPrice(Math.round(sSubtotal))}</span>
               </div>
               {sDelivery && (
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {sDelivery.distance} km · Delivery
+                    <MapPin className="h-3 w-3" /> {sDelivery.distance} km · {t('delivery_fee')}
                   </span>
-                  <span className="font-medium text-foreground">₹{sDelivery.fee}</span>
+                  <span className="font-medium text-foreground">{formatPrice(sDelivery.fee)}</span>
                 </div>
               )}
             </div>
@@ -139,21 +141,21 @@ export default function Cart() {
 
       <Card className="p-4 space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium text-foreground">₹{Math.round(subtotal)}</span>
+          <span className="text-muted-foreground">{t('subtotal')}</span>
+          <span className="font-medium text-foreground">{formatPrice(Math.round(subtotal))}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Delivery</span>
-          <span className="font-medium text-foreground">₹{totalDeliveryFee}</span>
+          <span className="text-muted-foreground">{t('delivery_fee')}</span>
+          <span className="font-medium text-foreground">{formatPrice(totalDeliveryFee)}</span>
         </div>
         <div className="border-t pt-2 flex justify-between text-base">
-          <span className="font-semibold text-foreground">Total</span>
-          <span className="font-bold text-foreground">₹{Math.round(total)}</span>
+          <span className="font-semibold text-foreground">{t('total')}</span>
+          <span className="font-bold text-foreground">{formatPrice(Math.round(total))}</span>
         </div>
       </Card>
 
       <Button onClick={() => navigate('/checkout')} className="w-full h-12 rounded-xl text-base font-semibold">
-        Proceed to Checkout · ₹{Math.round(total)} <ArrowRight className="h-4 w-4 ml-1" />
+        {t('proceed_checkout')} · {formatPrice(Math.round(total))} <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
     </div>
   );

@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/common/EmptyState';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Eye, RotateCcw } from 'lucide-react';
+import { MapPin, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -22,6 +24,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export default function Orders() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
+  const { t } = useLanguage();
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['orders', user?.id],
@@ -39,20 +43,24 @@ export default function Orders() {
   if (isLoading) {
     return (
       <div className="px-4 py-4 space-y-4">
-        <h1 className="font-display text-xl font-bold text-foreground">Your Orders</h1>
+        <h1 className="font-display text-xl font-bold text-foreground">{t('orders')}</h1>
         {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
       </div>
     );
   }
 
   if (!orders || orders.length === 0) {
-    return <EmptyState type="orders" />;
+    return (
+      <div className="px-4 py-16 text-center">
+        <p className="text-muted-foreground">{t('no_orders')}</p>
+        <Button variant="outline" onClick={() => navigate('/home')} className="mt-4 rounded-xl">{t('home')}</Button>
+      </div>
+    );
   }
 
   return (
     <div className="px-4 py-4 space-y-4">
-      <h1 className="font-display text-xl font-bold text-foreground">Your Orders</h1>
-
+      <h1 className="font-display text-xl font-bold text-foreground">{t('orders')}</h1>
       <div className="space-y-3">
         {orders.map((order: any) => {
           const sc = statusConfig[order.status] || statusConfig.placed;
@@ -74,14 +82,14 @@ export default function Orders() {
                 {order.order_items?.slice(0, 3).map((item: any) => (
                   <div key={item.id} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{item.product_name} × {item.quantity_in_base_unit}</span>
-                    <span className="text-foreground">₹{Math.round(item.line_total_inr)}</span>
+                    <span className="text-foreground">{formatPrice(Math.round(item.line_total_inr))}</span>
                   </div>
                 ))}
                 {order.order_items?.length > 3 && <p className="text-[10px] text-muted-foreground">+{order.order_items.length - 3} more</p>}
               </div>
 
               <div className="flex items-center justify-between border-t pt-2">
-                <span className="text-sm font-bold text-foreground">{order.total_display || `₹${Math.round(order.total_inr)}`}</span>
+                <span className="text-sm font-bold text-foreground">{formatPrice(Math.round(order.total_inr))}</span>
                 <div className="flex gap-2">
                   {isActive && (
                     <Button variant="outline" size="sm" className="text-xs h-7 rounded-lg gap-1" onClick={() => navigate(`/orders/${order.id}/track`)}>
