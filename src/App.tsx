@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -32,45 +34,51 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <LocationProvider>
-          <CartProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<SignUp />} />
+        <CurrencyProvider>
+          <LanguageProvider>
+            <LocationProvider>
+              <CartProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<SignUp />} />
 
-                {/* Protected customer routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<CustomerLayout />}>
-                    <Route path="/home" element={<CustomerHome />} />
-                    <Route path="/search" element={<SearchResults />} />
-                    <Route path="/shops" element={<ShopsPage />} />
-                    <Route path="/vendors/:slug" element={<VendorStorefront />} />
-                    <Route path="/products/:id" element={<ProductDetail />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/orders/:orderId/track" element={<OrderTracking />} />
-                    <Route path="/profile" element={<Profile />} />
-                  </Route>
-                </Route>
+                    {/* Protected customer routes */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route element={<CustomerLayout />}>
+                        <Route path="/home" element={<CustomerHome />} />
+                        <Route path="/search" element={<SearchResults />} />
+                        <Route path="/shops" element={<ShopsPage />} />
+                        <Route path="/vendors/:slug" element={<VendorStorefront />} />
+                        <Route path="/products/:id" element={<ProductDetail />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/orders" element={<Orders />} />
+                        <Route path="/orders/:orderId/track" element={<OrderTracking />} />
+                        <Route path="/profile" element={<Profile />} />
+                      </Route>
+                    </Route>
 
-                {/* Vendor protected route */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                </Route>
+                    {/* Vendor protected route */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                    </Route>
 
-                {/* Placeholder routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    {/* Admin protected route */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    </Route>
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </CartProvider>
-        </LocationProvider>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </CartProvider>
+            </LocationProvider>
+          </LanguageProvider>
+        </CurrencyProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

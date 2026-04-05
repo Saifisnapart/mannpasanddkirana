@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { User, MapPin, Settings, LogOut, Navigation, Plus, Pencil, Trash2 } from 'lucide-react';
+import { User, MapPin, LogOut, Navigation, Plus, Pencil, Trash2, Globe, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from '@/contexts/LocationContext';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { areaName } = useLocation();
+  const { languages, currentLanguage, setLanguage, t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [addrDialogOpen, setAddrDialogOpen] = useState(false);
@@ -38,6 +40,10 @@ export default function Profile() {
   const [addrForm, setAddrForm] = useState<AddressForm>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
+
+  // Editable profile fields
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile', user?.id],
@@ -48,6 +54,13 @@ export default function Profile() {
     enabled: !!user,
   });
 
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.display_name || '');
+      setEditPhone(profile.phone || '');
+    }
+  }, [profile]);
+
   const { data: addresses, isLoading: addrLoading } = useQuery({
     queryKey: ['addresses', user?.id],
     queryFn: async () => {
@@ -55,6 +68,18 @@ export default function Profile() {
       return data || [];
     },
     enabled: !!user,
+  });
+
+  const saveProfile = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('profiles').update({ display_name: editName, phone: editPhone }).eq('user_id', user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      toast.success('Profile updated');
+    },
+    onError: (err: any) => toast.error(err.message),
   });
 
   const saveAddress = useMutation({
@@ -110,10 +135,7 @@ export default function Profile() {
     );
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/');
-  };
+  const handleLogout = async () => { await signOut(); navigate('/'); };
 
   const openEditAddr = (addr: any) => {
     setEditingAddrId(addr.id);
@@ -123,21 +145,18 @@ export default function Profile() {
 
   return (
     <div className="px-4 py-4 space-y-5">
-      <h1 className="font-display text-xl font-bold text-foreground">Profile</h1>
+      <h1 className="font-display text-xl font-bold text-foreground">{t('profile')}</h1>
 
       {/* Personal Details */}
       <Card className="p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-1"><User className="h-4 w-4" /> Personal Details</h2>
         {profileLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-          </div>
+          <div className="space-y-2"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
         ) : (
           <div className="space-y-2">
             <div>
               <Label className="text-xs text-muted-foreground">Name</Label>
-              <Input defaultValue={profile?.display_name || ''} className="h-9 text-sm rounded-lg" readOnly />
+              <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-9 text-sm rounded-lg" />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Email</Label>
@@ -145,24 +164,41 @@ export default function Profile() {
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Phone</Label>
-              <Input defaultValue={profile?.phone || ''} className="h-9 text-sm rounded-lg" readOnly />
+              <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="h-9 text-sm rounded-lg" />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Buyer Type</Label>
               <Input defaultValue={profile?.buyer_type || 'one_time'} className="h-9 text-sm rounded-lg capitalize" readOnly />
             </div>
+            <Button size="sm" onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending} className="rounded-lg text-xs">
+              {saveProfile.isPending ? 'Saving...' : t('save')}
+            </Button>
           </div>
         )}
+      </Card>
+
+      {/* Language */}
+      <Card className="p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Language / भाषा</h2>
+        <div className="space-y-1">
+          {languages.map(lang => (
+            <button key={lang.id} onClick={() => setLanguage(lang.id)}
+              className={`w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-colors ${lang.id === currentLanguage.id ? 'border-2 border-primary bg-primary/5' : 'border border-border hover:bg-secondary'}`}>
+              <div>
+                <span className="font-medium text-foreground">{lang.native_name}</span>
+                <span className="text-muted-foreground ml-2 text-xs">{lang.name}</span>
+              </div>
+              {lang.id === currentLanguage.id && <Check className="h-4 w-4 text-primary" />}
+            </button>
+          ))}
+        </div>
       </Card>
 
       {/* Addresses */}
       <Card className="p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-1"><MapPin className="h-4 w-4" /> Saved Addresses</h2>
         {addrLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-16 rounded-lg" />
-            <Skeleton className="h-16 rounded-lg" />
-          </div>
+          <div className="space-y-2"><Skeleton className="h-16 rounded-lg" /><Skeleton className="h-16 rounded-lg" /></div>
         ) : addresses && addresses.length > 0 ? (
           addresses.map((a: any) => (
             <div key={a.id} className="flex items-start gap-2 p-2 rounded-lg bg-secondary">
@@ -183,7 +219,7 @@ export default function Profile() {
             </div>
           ))
         ) : (
-          <p className="text-xs text-muted-foreground">No addresses saved yet.</p>
+          <p className="text-xs text-muted-foreground">{t('no_addresses')}</p>
         )}
         <Button variant="outline" size="sm" className="text-xs rounded-lg" onClick={() => { setEditingAddrId(null); setAddrForm(emptyForm); setAddrDialogOpen(true); }}>
           <Plus className="h-3 w-3 mr-1" /> Add Address
@@ -193,10 +229,10 @@ export default function Profile() {
       {/* Actions */}
       <div className="space-y-2">
         <Button variant="outline" className="w-full justify-start gap-2 rounded-lg text-sm h-10" onClick={() => navigate('/shops')}>
-          <Navigation className="h-4 w-4" /> Browse Shops
+          <Navigation className="h-4 w-4" /> {t('shops')}
         </Button>
         <Button variant="outline" className="w-full justify-start gap-2 rounded-lg text-sm h-10 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleLogout}>
-          <LogOut className="h-4 w-4" /> Log Out
+          <LogOut className="h-4 w-4" /> {t('logout')}
         </Button>
       </div>
 
@@ -204,7 +240,7 @@ export default function Profile() {
       <Dialog open={addrDialogOpen} onOpenChange={setAddrDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingAddrId ? 'Edit Address' : 'Add Address'}</DialogTitle>
+            <DialogTitle>{editingAddrId ? t('edit') : 'Add'} Address</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
@@ -238,7 +274,7 @@ export default function Profile() {
           </div>
           <DialogFooter>
             <Button onClick={() => saveAddress.mutate({ ...addrForm, id: editingAddrId || undefined })} disabled={!addrForm.label || !addrForm.full_address || saveAddress.isPending} className="w-full rounded-lg">
-              {saveAddress.isPending ? 'Saving...' : 'Save Address'}
+              {saveAddress.isPending ? 'Saving...' : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -248,12 +284,12 @@ export default function Profile() {
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>Delete Address?</DialogTitle>
+            <DialogTitle>{t('delete')} Address?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteConfirm && deleteAddress.mutate(deleteConfirm)} className="flex-1">Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">{t('cancel')}</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && deleteAddress.mutate(deleteConfirm)} className="flex-1">{t('delete')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
